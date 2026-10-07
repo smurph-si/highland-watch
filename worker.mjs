@@ -17,7 +17,7 @@ async function load(url, json=false) {
   if(!r.ok)throw new Error('Source unavailable');
   return json?r.json():parseFeed(await r.text());
 }
-export function isImportant(text) { return /\b(warnings?|flood(?:ing|s)?|storms?|closures?|closed|disruption|missing|evacuat\w*|wildfires?|power cuts?|outages?|major incident|crash(?:es)?|collision|snow|ice|urgent|landslides?|rescue|bird flu|protection zone)\b|\b(?:bus|rail|ferry|train)\b.{0,60}\b(?:cut|cancel|suspend)/i.test(text); }
+export function isImportant(text) { return /\b(warnings?|flood(?:ing|s)?|storms?|closures?|closed|disruption|missing|evacuat\w*|wildfires?|power cuts?|outages?|major incident|crash(?:es)?|collision|snow|ice|urgent|landslides?|rescue|bird flu|protection zone)\b|\b(?:bus|rail|ferry|train)\b.{0,60}\b(?:cut|cancel|suspend)|\b(?:cut|cancel|suspend)\w*\b.{0,60}\b(?:bus|rail|ferry|train)\b/i.test(text); }
 export async function dashboard() {
   const results=await Promise.allSettled([load(WEATHER,true),load(SOURCES.warnings),load(SOURCES.news)]);
   const [weather,warnings,news]=results.map(r=>r.status==='fulfilled'?r.value:null);
