@@ -14,7 +14,7 @@ export function parseFeed(xml) {
 }
 async function load(url, json=false) {
   const r=await fetch(url,{signal:AbortSignal.timeout(10000),headers:{'User-Agent':'HighlandWatch/1.0'},cf:{cacheTtl:300,cacheEverything:true}});
-  if(!r.ok)throw new Error('Source unavailable');
+  if(!r.ok){console.warn('Upstream source failed', new URL(url).hostname, r.status);throw new Error('Source unavailable');}
   return json?r.json():parseFeed(await r.text());
 }
 export function isImportant(text) { return /\b(warnings?|flood(?:ing|s)?|storms?|closures?|closed|disruption|missing|evacuat\w*|wildfires?|power cuts?|outages?|major incident|crash(?:es)?|collision|snow|ice|urgent|landslides?|rescue|bird flu|protection zone)\b|\b(?:bus|rail|ferry|train)\b.{0,60}\b(?:cut|cancel|suspend)|\b(?:cut|cancel|suspend)\w*\b.{0,60}\b(?:bus|rail|ferry|train)\b/i.test(text); }
@@ -23,7 +23,8 @@ export async function dashboard() {
   const [weather,warnings,news]=results.map(r=>r.status==='fulfilled'?r.value:null);
   const now=Date.now();
   const articles=news?.filter(i=>{const date=Date.parse(i.published);return Number.isFinite(date)&&date<=now+3600000&&now-date<7*86400000;}).map(i=>({...i,local:/grantown|strathspey|badenoch|aviemore|cairngorm|carrbridge|nethy bridge|boat of garten|\bA95\b|\bA9\b/i.test(i.title+' '+i.summary),important:isImportant(i.title+' '+i.summary)})).sort((a,b)=>Number(b.local)-Number(a.local)||Number(b.important)-Number(a.important)||Date.parse(b.published)-Date.parse(a.published)).slice(0,12) ?? null;
-  return {weather,warnings,news:articles,checkedAt:new Date().toISOString(),errors:results.flatMap((r,i)=>r.status==='rejected'?[['weather','warnings','news'][i]]:[])};
+  results.forEach((r,i)=>{if(r.status==='rejected')console.warn('Source load failed', ['weather','warnings','news'][i], String(r.reason));});
+  return {weather,weatherFallbackUrl:WEATHER,warnings,news:articles,checkedAt:new Date().toISOString(),errors:results.flatMap((r,i)=>r.status==='rejected'?[['weather','warnings','news'][i]]:[])};
 }
 export default {async fetch(request,env) {
   const path=new URL(request.url).pathname;
